@@ -15,3 +15,5 @@ __pycache__/
 
 # Ignore local virtual environment
 jobs_apply_venv/
+
+# pip freeze > requirements.txt
