@@ -1,1 +1,17 @@
-.config
+# Ignore the config folder
+config/
+
+# Ignore any local data or secrets you don’t want in repo
+*.env
+*.json
+*.xlsx
+*.db
+
+# Python common ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local virtual environment
+jobs_apply_venv/
