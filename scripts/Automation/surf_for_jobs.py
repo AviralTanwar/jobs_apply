@@ -1,77 +1,63 @@
-import subprocess                           # Used to run system commands (like opening Chrome)
-import time                                 # Used to add delays between opening URLs
-from dotenv import load_dotenv              # Loads environment variables from a .env file
-import os                                   # Used to interact with the operating system
-import threading                            # Used to run multiple tasks in parallel
+import time
+import os
+import threading
+from dotenv import load_dotenv
 
-# from linkedIn.surf_linkedin import fetch_linkedin_job_ids
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
 from Automation.linkedIn.surf_linkedin import fetch_linkedin_job_ids
 
-
-# ---- BROWSER CONFIG ----
-
-# Load environment variables from the given .env file path
-# This file should contain:
-# chrome_path=<path to Chrome.exe>
-# chrome_profile_name=<name of your Chrome profile directory>
-
+# ---- ENVIRONMENT CONFIG ----
 load_dotenv(r'C:\Users\avira\Documents\Restart_Skills_v2025\GitHub\jobs_apply\config\credentials.env')
+chrome_path = os.getenv('chrome_path')  # Not required for Selenium unless custom
+chrome_profile_name = os.getenv('chrome_profile_name')  # Not used here unless you want to persist session
 
-# Get the Chrome executable path from environment variables
-chrome_path = os.getenv('chrome_path')
-
-# Get the Chrome profile directory name from environment variables
-chrome_profile_name = os.getenv('chrome_profile_name')
-
-
-def open_url_in_chrome(url):
+# ---- HEADLESS BROWSER FUNCTION ----
+def open_url_with_selenium(url):
     """
-    Opens a single URL in Chrome with the specified profile.
-    Also, if the URL is LinkedIn, fetches job IDs in parallel.
+    Opens a URL in headless Chrome using Selenium and scrapes job data if it's a LinkedIn URL.
     """
     try:
-        subprocess.Popen([
-            chrome_path,
-            "--new-window",
-            f'--profile-directory={chrome_profile_name}',
-            url
-        ])
-        # Note: The above command opens a new Chrome window with the specified profile and navigates to the provided URL.
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
-        # Optional delay to let the browser load (not mandatory)
-        time.sleep(30)
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(url)
+        time.sleep(5)  # Give time for page to load (you can improve this with WebDriverWait)
 
         if "linkedin" in url.lower():
-            job_data = fetch_linkedin_job_ids(url)
-            print(f"[LinkedIn Job Data] {len(job_data)} jobs found")
+            exit
+            job_data = fetch_linkedin_job_ids(driver.page_source)
+            print(f"[LinkedIn Job Data] {len(job_data)} jobs found:")
             for job_id in job_data:
                 print(f" - Job ID: {job_id}")
 
+        driver.quit()
+
     except Exception as e:
-        print(f"Error in open_url_in_chrome for URL {url}: {e}")
-        print(os.path.abspath(__file__))
+        print(f"Error in open_url_with_selenium for URL {url}: {e}")
         raise
 
+# ---- PARALLEL SURF FUNCTION ----
 def surf_for_jobs(urls):
     """
-    Opens each URL from the list in a new Chrome window,
-    using the specified Chrome profile.
-    Each URL opens in parallel (simultaneously) using threads.
+    Opens each URL in parallel using threading and Selenium (headless).
     """
     try:
-        threads = []  # List to keep track of threads
-
+        threads = []
         for url in urls:
-            # Create a new thread for each URL
-            thread = threading.Thread(target=open_url_in_chrome, args=(url,))
+            thread = threading.Thread(target=open_url_with_selenium, args=(url,))
             threads.append(thread)
-            thread.start()  # Start the thread (runs open_url_in_chrome)
+            thread.start()
 
-        # Optional: wait for all threads to finish (not strictly needed here)
         for thread in threads:
             thread.join()
 
     except Exception as e:
-        print(f"An error occurred in the function :- surf_for_jobs: {e}")  
-        print(os.path.abspath(__file__))
+        print(f"An error occurred in surf_for_jobs: {e}")
         raise
